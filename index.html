@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>Registro</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #f6f7f5;
+    --card: #ffffff;
+    --text: #1c1f1e;
+    --muted: #66706c;
+    --line: #e1e5e2;
+    --accent: #0f766e;
+    --accent-ink: #ffffff;
+    --rec: #dc2626;
+    --wa: #128c4b;
+    --warn-bg: #fff7e6;
+    --warn: #8a5a00;
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111413;
+      --card: #1a1e1d;
+      --text: #eef1ef;
+      --muted: #9aa5a0;
+      --line: #2b3130;
+      --accent: #2dd4bf;
+      --accent-ink: #062b27;
+      --rec: #f87171;
+      --wa: #25d366;
+      --warn-bg: #2d2412;
+      --warn: #f5c76b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  main {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: max(16px, env(safe-area-inset-top)) 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  header { display: flex; align-items: baseline; justify-content: space-between; }
+  h1 { font-size: 26px; margin: 4px 0 0; letter-spacing: -0.02em; }
+  header small { color: var(--muted); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .segmented {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 6px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .segmented button {
+    border: 0;
+    border-radius: 999px;
+    padding: 12px;
+    font: inherit;
+    font-weight: 600;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .segmented button:disabled { cursor: default; opacity: .6; }
+
+  .stage {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #0b0d0c;
+    display: grid;
+    place-items: center;
+  }
+  .stage video, .stage canvas { width: 100%; height: 100%; display: block; }
+  .stage video { object-fit: cover; }
+  .stage .placeholder { color: #9aa5a0; text-align: center; padding: 20px; }
+  .badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,.55);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .badge::before {
+    content: "";
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #ef4444;
+    animation: blink 1s infinite;
+  }
+  .recording .badge { display: inline-flex; }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  .rec-row { display: flex; justify-content: center; }
+  .rec-btn {
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    border: 5px solid var(--line);
+    background: var(--card);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .rec-btn span {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--rec);
+    transition: all .2s;
+  }
+  .recording .rec-btn span { width: 32px; height: 32px; border-radius: 8px; }
+  .rec-label { text-align: center; color: var(--muted); margin-top: -6px; font-size: 14px; }
+
+  .listen h2, .contacts summary { font-size: 15px; margin: 0 0 6px; }
+  .listen .heard { min-height: 1.45em; font-size: 18px; }
+  .listen .heard .interim { color: var(--muted); }
+  .listen .hint { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+  .note {
+    background: var(--warn-bg);
+    color: var(--warn);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+  .note:empty { display: none; }
+
+  .result { display: none; flex-direction: column; gap: 12px; }
+  .result.show { display: flex; }
+  .result h2 { margin: 0; font-size: 18px; }
+  .result video, .result audio { width: 100%; border-radius: 12px; }
+  .big {
+    border: 0;
+    border-radius: 14px;
+    padding: 16px;
+    font: inherit;
+    font-weight: 700;
+    font-size: 17px;
+    cursor: pointer;
+    width: 100%;
+  }
+  .big.wa { background: var(--wa); color: #fff; }
+  .big.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 600; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  select, input {
+    font: inherit;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .contacts summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
+  .contacts summary::after { content: "▾"; color: var(--muted); }
+  .contacts[open] summary::after { content: "▴"; }
+  .contacts ul { list-style: none; padding: 0; margin: 12px 0; }
+  .contacts li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .contacts li div { flex: 1; min-width: 0; }
+  .contacts li small { color: var(--muted); display: block; }
+  .contacts li button {
+    border: 0; background: transparent; color: var(--muted);
+    font-size: 20px; cursor: pointer; padding: 4px 8px;
+  }
+  .contacts form { display: grid; gap: 8px; }
+  .contacts .empty { color: var(--muted); font-size: 14px; }
+  .linkish {
+    border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600;
+    cursor: pointer; padding: 8px 0; text-align: left;
+  }
+  .demo { display: none; margin-top: 10px; }
+  .demo.show { display: flex; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<main id="app">
+  <header>
+    <h1>Registro</h1>
+    <small id="support"></small>
+  </header>
+
+  <div class="segmented" role="group" aria-label="Qué grabar">
+    <button type="button" data-mode="audio" aria-pressed="true">🎙️ Audio</button>
+    <button type="button" data-mode="video" aria-pressed="false">🎥 Video</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="placeholder" id="placeholder">Pulsa el botón rojo para empezar a grabar</div>
+    <video id="preview" muted playsinline hidden></video>
+    <canvas id="meter" hidden></canvas>
+    <div class="badge" id="timer">00:00</div>
+  </div>
+
+  <div class="rec-row">
+    <button type="button" class="rec-btn" id="recBtn" aria-label="Grabar"><span></span></button>
+  </div>
+  <div class="rec-label" id="recLabel">Grabar</div>
+
+  <section class="card listen">
+    <h2>Escuchando</h2>
+    <div class="heard" id="heard"><span class="final"></span> <span class="interim"></span></div>
+    <p class="hint">Para terminar y enviar, di: <b>"enviar a</b> <i>nombre</i><b>"</b></p>
+    <div class="note" id="note"></div>
+    <form class="demo row" id="demo">
+      <input id="demoText" placeholder='Simular frase, p. ej. "enviar a Juan"' autocomplete="off">
+      <button class="big secondary" style="flex:0 0 auto;width:auto">Decir</button>
+    </form>
+  </section>
+
+  <section class="card result" id="result">
+    <h2 id="resultTitle">Grabación lista</h2>
+    <div id="player"></div>
+    <select id="contactSelect" aria-label="Contacto"></select>
+    <button type="button" class="big wa" id="sendBtn">Enviar por WhatsApp</button>
+    <div class="row">
+      <button type="button" class="big secondary" id="downloadBtn">Descargar</button>
+      <button type="button" class="big secondary" id="newBtn">Nueva grabación</button>
+    </div>
+    <div class="note" id="sendNote"></div>
+  </section>
+
+  <details class="card contacts" id="contacts">
+    <summary><span>Mis contactos (<span id="count">0</span>)</span></summary>
+    <ul id="contactList"></ul>
+    <form id="addForm">
+      <input id="newName" placeholder="Nombre (como lo vas a decir)" required autocomplete="off">
+      <input id="newPhone" placeholder="WhatsApp con código de país, p. ej. +54 9 11 1234 5678" required inputmode="tel" autocomplete="off">
+      <button class="big secondary">Agregar contacto</button>
+    </form>
+    <button type="button" class="linkish" id="importBtn" hidden>📇 Importar desde la agenda del teléfono</button>
+  </details>
+
+  <footer>Grabar a otras personas sin su consentimiento puede ser ilegal en tu país.</footer>
+</main>
+
+<script>
+"use strict";
+
+// ---------- Utilidades de texto (portadas de VoiceCommandDetector.kt / ContactFinder.kt) ----------
+
+function normalize(text) {
+  return text.normalize("NFD").replace(/\p{Mn}+/gu, "").toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+const COMMAND = /\b(?:enviar|envia|mandar|manda)(?:lo|la|le|les|selo|sela|selos|selas)?\s+(?:a|al|para)\s+(.+)$/;
+const TRAILING_FILLER = /\s+(?:por favor|por whatsapp|gracias|ya)$/;
+const LEADING_FILLER = /^(?:mi|mis|la|el|los|las)\s+/;
+
+/** Devuelve el nombre dicho si el texto contiene "enviar a <nombre>". */
+function parseCommand(text) {
+  const m = normalize(text).match(COMMAND);
+  if (!m) return null;
+  let name = m[1];
+  for (;;) {
+    const trimmed = name.replace(TRAILING_FILLER, "").replace(LEADING_FILLER, "");
+    if (trimmed === name) break;
+    name = trimmed;
+  }
+  name = name.trim();
+  return name || null;
+}
+
+function levenshtein(a, b) {
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i];
+    for (let j = 1; j <= b.length; j++) {
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = curr;
+  }
+  return prev[b.length];
+}
+
+function similarity(a, b) {
+  const longest = Math.max(a.length, b.length);
+  return longest === 0 ? 1 : 1 - levenshtein(a, b) / longest;
+}
+
+function score(spoken, name) {
+  if (name === spoken) return 1;
+  const nameTokens = name.split(" ");
+  const spokenTokens = spoken.split(" ");
+  if (spokenTokens.every(t => nameTokens.includes(t))) return 0.95;
+  if (name.startsWith(spoken)) return 0.9;
+  const prefix = nameTokens.slice(0, spokenTokens.length).join(" ");
+  return Math.max(similarity(spoken, prefix), similarity(spoken, name));
+}
+
+/** Busca en la lista el contacto que mejor coincide con el nombre dicho. */
+function findContact(spoken) {
+  const target = normalize(spoken);
+  if (!target) return null;
+  let best = null, bestScore = 0.75;
+  for (const c of contacts) {
+    const s = score(target, normalize(c.name));
+    if (s >= bestScore) { best = c; bestScore = s; }
+  }
+  return best;
+}
+
+// ---------- Contactos (guardados en este navegador) ----------
+
+const STORAGE_KEY = "registro.contacts";
+let contacts = [];
+try { contacts = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { contacts = []; }
+
+function saveContacts() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts)); } catch {}
+  renderContacts();
+}
+
+function phoneDigits(phone) { return phone.replace(/\D/g, ""); }
+
+function renderContacts() {
+  const list = $("#contactList");
+  list.replaceChildren();
+  $("#count").textContent = contacts.length;
+  if (!contacts.length) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = "Todavía no hay contactos. Agrega al menos uno para poder decir \"enviar a…\".";
+    list.append(li);
+  }
+  contacts.forEach((c, i) => {
+    const li = document.createElement("li");
+    const info = document.createElement("div");
+    const name = document.createElement("b");
+    name.textContent = c.name;
+    const phone = document.createElement("small");
+    phone.textContent = c.phone;
+    info.append(name, phone);
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "✕";
+    del.setAttribute("aria-label", "Quitar " + c.name);
+    del.onclick = () => { contacts.splice(i, 1); saveContacts(); };
+    li.append(info, del);
+    list.append(li);
+  });
+  renderContactSelect();
+}
+
+function addContact(name, phone) {
+  name = name.trim();
+  phone = phone.trim();
+  if (!name || phoneDigits(phone).length < 6) return false;
+  const existing = contacts.find(c => normalize(c.name) === normalize(name));
+  if (existing) existing.phone = phone; else contacts.push({ name, phone });
+  saveContacts();
+  return true;
+}
+
+// ---------- Estado de la grabación ----------
+
+const $ = sel => document.querySelector(sel);
+const app = $("#app");
+let mode = "audio";
+let stream = null, recorder = null, chunks = [], mimeType = "";
+let recognition = null, recognizing = false;
+let audioCtx = null, rafId = 0;
+let startedAt = 0, timerId = 0;
+let pendingContact = null;
+let lastBlob = null, lastFile = null;
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const canShareFiles = !!(navigator.canShare && navigator.share);
+
+function setNote(text) { $("#note").textContent = text || ""; }
+
+function pickMime(kind) {
+  const options = kind === "video"
+    ? ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+    : ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"];
+  return options.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+}
+
+async function startRecording() {
+  setNote("");
+  hideResult();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(
+      mode === "video"
+        ? { audio: true, video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } }
+        : { audio: true }
+    );
+  } catch (e) {
+    setNote("No pude usar el " + (mode === "video" ? "micrófono o la cámara" : "micrófono") +
+      ". Revisa los permisos del navegador. (" + e.name + ")");
+    return;
+  }
+
+  mimeType = pickMime(mode);
+  chunks = [];
+  pendingContact = null;
+  recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = onRecordingStopped;
+  recorder.start(1000);
+
+  showLive();
+  startTimer();
+  startListening();
+  app.classList.add("recording");
+  $("#recLabel").textContent = "Detener";
+  $("#recBtn").setAttribute("aria-label", "Detener");
+  setModeButtonsEnabled(false);
+}
+
+function stopRecording(contact) {
+  if (!recorder || recorder.state === "inactive") return;
+  pendingContact = contact || null;
+  stopListening();
+  recorder.stop();
+}
+
+function onRecordingStopped() {
+  stopTimer();
+  stopLive();
+  stream.getTracks().forEach(t => t.stop());
+  app.classList.remove("recording");
+  $("#recLabel").textContent = "Grabar";
+  $("#recBtn").setAttribute("aria-label", "Grabar");
+  setModeButtonsEnabled(true);
+
+  const type = (recorder.mimeType || mimeType || (mode === "video" ? "video/webm" : "audio/webm")).split(";")[0];
+  lastBlob = new Blob(chunks, { type });
+  const ext = type.includes("mp4") ? (mode === "video" ? "mp4" : "m4a") : "webm";
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "_");
+  lastFile = new File([lastBlob], `registro_${stamp}.${ext}`, { type });
+  showResult(pendingContact);
+}
+
+// ---------- Vista en vivo (cámara o medidor de audio) ----------
+
+function showLive() {
+  $("#placeholder").hidden = true;
+  if (mode === "video") {
+    const v = $("#preview");
+    v.srcObject = stream;
+    v.hidden = false;
+    v.play().catch(() => {});
+  } else {
+    drawMeter();
+  }
+}
+
+function stopLive() {
+  cancelAnimationFrame(rafId);
+  if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+  const v = $("#preview");
+  v.srcObject = null;
+  v.hidden = true;
+  $("#meter").hidden = true;
+  $("#placeholder").hidden = false;
+  $("#placeholder").textContent = "Pulsa el botón rojo para grabar de nuevo";
+}
+
+function drawMeter() {
+  const canvas = $("#meter");
+  canvas.hidden = false;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  const ctx = canvas.getContext("2d");
+  const color = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2dd4bf";
+
+  const frame = () => {
+    const w = canvas.width = canvas.clientWidth * devicePixelRatio;
+    const h = canvas.height = canvas.clientHeight * devicePixelRatio;
+    analyser.getByteFrequencyData(data);
+    ctx.clearRect(0, 0, w, h);
+    const bars = 32, gap = w / bars * 0.3, bw = w / bars - gap;
+    ctx.fillStyle = color;
+    for (let i = 0; i < bars; i++) {
+      const v = data[Math.floor(i * data.length / bars / 1.5)] / 255;
+      const bh = Math.max(h * 0.03, v * h * 0.8);
+      const x = i * (bw + gap) + gap / 2;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(x, (h - bh) / 2, bw, bh, bw / 2) : ctx.rect(x, (h - bh) / 2, bw, bh);
+      ctx.fill();
+    }
+    rafId = requestAnimationFrame(frame);
+  };
+  frame();
+}
+
+function startTimer() {
+  startedAt = Date.now();
+  const tick = () => {
+    const s = Math.floor((Date.now() - startedAt) / 1000);
+    $("#timer").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+  };
+  tick();
+  timerId = setInterval(tick, 500);
+}
+
+function stopTimer() { clearInterval(timerId); }
+
+// ---------- Reconocimiento de voz ----------
+
+function showHeard(finalText, interimText) {
+  $("#heard .final").textContent = finalText;
+  $("#heard .interim").textContent = interimText;
+}
+
+/** Procesa una frase completa: si es el comando y el contacto existe, termina la grabación. */
+function handlePhrase(text) {
+  showHeard(text, "");
+  const name = parseCommand(text);
+  if (!name) return;
+  const contact = findContact(name);
+  if (contact) {
+    setNote("");
+    stopRecording(contact);
+  } else {
+    setNote(`No encontré a "${name}" en tus contactos; sigo grabando.`);
+  }
+}
+
+function startListening() {
+  showHeard("", "");
+  if (!SpeechRecognition) {
+    setNote("Este navegador no reconoce la voz. Usa el botón para detener, o abre la página en Chrome.");
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = navigator.language && navigator.language.startsWith("es") ? navigator.language : "es-ES";
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) handlePhrase(r[0].transcript.trim());
+      else interim += r[0].transcript;
+    }
+    if (interim) $("#heard .interim").textContent = interim;
+  };
+  recognition.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      setNote("El navegador no permite el reconocimiento de voz aquí. Puedes detener con el botón.");
+      recognizing = false;
+    } else if (e.error === "network") {
+      setNote("El reconocimiento de voz necesita conexión a internet.");
+    }
+  };
+  // Chrome corta la escucha tras un silencio: la reiniciamos mientras se graba.
+  recognition.onend = () => {
+    if (recognizing) {
+      try { recognition.start(); } catch {}
+    }
+  };
+  recognizing = true;
+  try { recognition.start(); } catch {}
+}
+
+function stopListening() {
+  recognizing = false;
+  if (recognition) {
+    try { recognition.abort(); } catch {}
+    recognition = null;
+  }
+}
+
+// ---------- Resultado y envío ----------
+
+function renderContactSelect() {
+  const sel = $("#contactSelect");
+  const current = sel.value;
+  sel.replaceChildren(new Option("Elegir contacto…", ""));
+  contacts.forEach((c, i) => sel.append(new Option(c.name, String(i))));
+  sel.value = current && contacts[current] ? current : "";
+  updateSendButton();
+}
+
+function selectedContact() {
+  const i = $("#contactSelect").value;
+  return i === "" ? null : contacts[Number(i)];
+}
+
+function updateSendButton() {
+  const c = selectedContact();
+  $("#sendBtn").textContent = c ? `Enviar a ${c.name} por WhatsApp` : "Compartir por WhatsApp";
+}
+
+function showResult(contact) {
+  const player = $("#player");
+  player.replaceChildren();
+  const el = document.createElement(mode === "video" ? "video" : "audio");
+  el.controls = true;
+  el.playsInline = true;
+  el.src = URL.createObjectURL(lastBlob);
+  player.append(el);
+
+  const idx = contact ? contacts.indexOf(contact) : -1;
+  $("#contactSelect").value = idx >= 0 ? String(idx) : "";
+  updateSendButton();
+  $("#resultTitle").textContent = contact ? `Listo para enviar a ${contact.name}` : "Grabación lista";
+  $("#sendNote").textContent = "";
+  $("#result").classList.add("show");
+  $("#result").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function hideResult() {
+  $("#result").classList.remove("show");
+  const media = $("#player").firstChild;
+  if (media && media.src) URL.revokeObjectURL(media.src);
+  $("#player").replaceChildren();
+}
+
+function download() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(lastFile);
+  a.download = lastFile.name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+}
+
+async function send() {
+  const c = selectedContact();
+  const note = $("#sendNote");
+  note.textContent = "";
+
+  // Teléfono: menú "Compartir" del sistema con el archivo adjunto.
+  if (canShareFiles && navigator.canShare({ files: [lastFile] })) {
+    try {
+      await navigator.share({ files: [lastFile], title: "Registro" });
+      note.textContent = c ? `Elige WhatsApp y luego a ${c.name}.` : "";
+    } catch (e) {
+      if (e.name !== "AbortError") note.textContent = "No se pudo compartir: " + e.message;
+    }
+    return;
+  }
+
+  // PC: descarga el archivo y abre el chat en WhatsApp Web para adjuntarlo.
+  download();
+  const url = c ? `https://wa.me/${phoneDigits(c.phone)}` : "https://web.whatsapp.com/";
+  window.open(url, "_blank", "noopener");
+  note.textContent = "Se descargó la grabación. En el chat que se abrió, adjúntala con el clip 📎.";
+}
+
+// ---------- Eventos ----------
+
+document.querySelectorAll(".segmented button").forEach(btn => {
+  btn.onclick = () => {
+    mode = btn.dataset.mode;
+    document.querySelectorAll(".segmented button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+  };
+});
+
+function setModeButtonsEnabled(on) {
+  document.querySelectorAll(".segmented button").forEach(b => { b.disabled = !on; });
+}
+
+$("#recBtn").onclick = () => {
+  if (recorder && recorder.state === "recording") stopRecording(null);
+  else startRecording();
+};
+
+$("#contactSelect").onchange = updateSendButton;
+$("#sendBtn").onclick = send;
+$("#downloadBtn").onclick = download;
+$("#newBtn").onclick = () => { hideResult(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+$("#addForm").onsubmit = e => {
+  e.preventDefault();
+  if (addContact($("#newName").value, $("#newPhone").value)) {
+    $("#newName").value = "";
+    $("#newPhone").value = "";
+  }
+};
+
+// Contact Picker API (Chrome en Android)
+if ("contacts" in navigator && "select" in navigator.contacts) {
+  $("#importBtn").hidden = false;
+  $("#importBtn").onclick = async () => {
+    try {
+      const picked = await navigator.contacts.select(["name", "tel"], { multiple: true });
+      picked.forEach(p => { if (p.name?.[0] && p.tel?.[0]) addContact(p.name[0], p.tel[0]); });
+    } catch {}
+  };
+}
+
+// Simulador de frases: visible con ?demo o si el navegador no reconoce voz.
+if (new URLSearchParams(location.search).has("demo") || !SpeechRecognition) $("#demo").classList.add("show");
+$("#demo").onsubmit = e => {
+  e.preventDefault();
+  const text = $("#demoText").value.trim();
+  if (!text) return;
+  $("#demoText").value = "";
+  if (recorder && recorder.state === "recording") handlePhrase(text);
+  else setNote("Primero empieza a grabar.");
+};
+
+$("#support").textContent = SpeechRecognition ? "voz ✓" : "sin reconocimiento de voz";
+renderContacts();
+if (!contacts.length) $("#contacts").open = true;
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
