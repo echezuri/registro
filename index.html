@@ -404,7 +404,6 @@ let pendingContact = null;
 let lastBlob = null, lastFile = null;
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const canShareFiles = !!(navigator.canShare && navigator.share);
 
 function setNote(text) { $("#note").textContent = text || ""; }
 
@@ -465,7 +464,8 @@ function onRecordingStopped() {
 
   const type = (recorder.mimeType || mimeType || (mode === "video" ? "video/webm" : "audio/webm")).split(";")[0];
   lastBlob = new Blob(chunks, { type });
-  const ext = type.includes("mp4") ? (mode === "video" ? "mp4" : "m4a") : "webm";
+  // Chrome solo comparte archivos con extensiones que reconoce: .m4a/.mp4 o .weba/.webm.
+  const ext = type.includes("mp4") ? (mode === "video" ? "mp4" : "m4a") : (mode === "video" ? "webm" : "weba");
   const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "_");
   lastFile = new File([lastBlob], `registro_${stamp}.${ext}`, { type });
   showResult(pendingContact);
@@ -665,26 +665,55 @@ function download() {
   setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
 }
 
+function whatsAppUrl(c) {
+  return c ? `https://wa.me/${phoneDigits(c.phone)}` : "https://web.whatsapp.com/";
+}
+
+/**
+ * Plan B cuando el navegador no deja compartir el archivo: descargarlo y abrir el chat
+ * con un enlace (un enlace real funciona aunque ya no haya "clic" reciente del usuario).
+ */
+function showManualSend(c, downloaded) {
+  const note = $("#sendNote");
+  const link = document.createElement("a");
+  link.href = whatsAppUrl(c);
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.className = "big wa";
+  link.style.cssText = "display:block;text-align:center;text-decoration:none;margin-top:10px";
+  link.textContent = c ? `Abrir el chat de ${c.name}` : "Abrir WhatsApp";
+  note.replaceChildren(
+    downloaded
+      ? "Se descargó la grabación. Abre el chat y adjúntala con el clip 📎."
+      : "Este navegador no deja compartir el archivo directamente. Pulsa \"Descargar\", abre el chat y adjunta la grabación con el clip 📎.",
+    link
+  );
+}
+
 async function send() {
   const c = selectedContact();
   const note = $("#sendNote");
   note.textContent = "";
 
   // Teléfono: menú "Compartir" del sistema con el archivo adjunto.
-  if (canShareFiles && navigator.canShare({ files: [lastFile] })) {
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [lastFile] })) {
     try {
-      await navigator.share({ files: [lastFile], title: "Registro" });
+      await navigator.share({ files: [lastFile] });
       note.textContent = c ? `Elige WhatsApp y luego a ${c.name}.` : "";
     } catch (e) {
-      if (e.name !== "AbortError") note.textContent = "No se pudo compartir: " + e.message;
+      if (e.name !== "AbortError") showManualSend(c, false);
     }
     return;
   }
 
   // PC: descarga el archivo y abre el chat en WhatsApp Web para adjuntarlo.
   download();
-  const url = c ? `https://wa.me/${phoneDigits(c.phone)}` : "https://web.whatsapp.com/";
-  window.open(url, "_blank", "noopener");
+  const tab = window.open(whatsAppUrl(c), "_blank");
+  if (!tab) {
+    showManualSend(c, true);
+    return;
+  }
+  tab.opener = null;
   note.textContent = "Se descargó la grabación. En el chat que se abrió, adjúntala con el clip 📎.";
 }
 
