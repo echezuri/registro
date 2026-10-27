@@ -580,11 +580,15 @@ function startListening() {
     if (interim) $("#heard .interim").textContent = interim;
   };
   recognition.onerror = e => {
-    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-      setNote("El navegador no permite el reconocimiento de voz aquí. Puedes detener con el botón.");
+    if (e.error === "not-allowed" || e.error === "service-not-allowed" || e.error === "network") {
+      // "network" también aparece en navegadores basados en Chrome que no incluyen
+      // el servicio de voz de Google (Brave, Opera, apps de escritorio), aunque haya internet.
       recognizing = false;
-    } else if (e.error === "network") {
-      setNote("El reconocimiento de voz necesita conexión a internet.");
+      $("#support").textContent = "sin reconocimiento de voz";
+      $("#demo").classList.add("show");
+      setNote(navigator.onLine
+        ? "Este navegador no tiene reconocimiento de voz. Ábrela en Google Chrome, o escribe la frase abajo (por ejemplo \"enviar a Juan\"). La grabación sigue."
+        : "Sin conexión a internet: el reconocimiento de voz no funciona. Escribe la frase abajo o usa el botón para detener.");
     }
   };
   // Chrome corta la escucha tras un silencio: la reiniciamos mientras se graba.
